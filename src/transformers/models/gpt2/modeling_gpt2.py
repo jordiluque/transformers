@@ -193,13 +193,17 @@ class GPT2Attention(nn.Module):
         if not self.is_cross_attention:
             # if only "normal" attention layer implements causal mask
             query_length, key_length = query.size(-2), key.size(-2)
-            causal_mask = self.bias[:, :, key_length - query_length : key_length, :key_length].to(torch.bool)
-            mask_value = torch.finfo(attn_weights.dtype).min
+            #causal_mask = self.bias[:, :, key_length - query_length : key_length, :key_length].to(torch.bool)
+            causal_mask = self.bias[:, :, : key_length, :key_length].to(torch.bool)
+            # mask_value = torch.finfo(attn_weights.dtype).min
+            mask_value = attn_weights
             # Need to be a tensor, otherwise we get error: `RuntimeError: expected scalar type float but found double`.
             # Need to be on the same device, otherwise `RuntimeError: ..., x and y to be on the same device`
-            mask_value = torch.full([], mask_value, dtype=attn_weights.dtype).to(attn_weights.device)
-            attn_weights = torch.where(causal_mask, attn_weights.to(attn_weights.dtype), mask_value)
-
+            # mask_value = torch.full([], mask_value, dtype=attn_weights.dtype).to(attn_weights.device)
+            mask_value = mask_value.to(attn_weights.device)
+            #attn_weights = torch.where(causal_mask, attn_weights.to(attn_weights.dtype), mask_value)
+            attn_weights = mask_value 
+            
         if attention_mask is not None:
             # Apply the attention mask
             attn_weights = attn_weights + attention_mask
